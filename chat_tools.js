@@ -148,11 +148,15 @@ function ignoreSaltybet() {
       
       if (text.startsWith("!bet") ||
           text.startsWith("!funds") ||
+          text.startsWith("!newbet") ||
+          text.startsWith("!winner") ||
+          text.startsWith("!cancel") ||
           text.startsWith("!help")) {
         doesMatch = true;
       } else if (e.get("name") == "Fobwashed") {
         if (text.endsWith("credits.") ||
-        (text.includes("[") && text.includes("]"))) {
+        (text.includes("[") && text.includes("]")) || 
+        text.startsWith("https://docs.google.com/spreadsheets/d/1K2VLTtuTglRBrEKHmlYTWwM3alYvK3i062R-Ey0XPc0")) {
           doesMatch = true;
         }
       }
