@@ -114,10 +114,14 @@ function replaceAllCSSWithEditable() {
   }
 }
 
-function addScript(client) {
+function addScript(client, next) {
+  console.log(client)
   if (client.readyState != XMLHttpRequest.DONE) {
     return;
   }
+  
+  console.log("script loaded")
+
   
   let script = document.createElement('script');
   let text = document.createTextNode(client.responseText);
@@ -125,18 +129,24 @@ function addScript(client) {
   script.type = 'text/javascript';
   script.appendChild(text);
   
+  console.log("injecting script")
+  
   let newStyleSheetElement = document.getElementsByTagName("head")[0].appendChild(script);
   
   // Call on initial load and then set on a five minute schedule
 //  if (window.location.pathname.startsWith("/infinite/")) {
 //    getOptions();
 //  }
+  
+  if (next) {
+    next();
+  }
 }
 
-function loadScript(url) {
+function loadScript(url, next) {
   var client = new XMLHttpRequest();
   client.open('GET', url);
-  client.onreadystatechange = addScript.bind(this, client);
+  client.onreadystatechange = addScript.bind(this, client, next);
   client.send();
 }
 
@@ -163,7 +173,9 @@ function handleOptions(options) {
   
   let newStyleSheetElement = document.getElementsByTagName("head")[0].appendChild(script);
   
+  console.log("loading script")
   loadScript(chrome.runtime.getURL("chat_tools.js"));
+  //loadScript(chrome.runtime.getURL("chat_tools_1.js"));//, function() {loadScript(chrome.runtime.getURL("chat_tools_2.js")); });
 }
 
 function handleOptionsAndReply(options, sendResponse) {

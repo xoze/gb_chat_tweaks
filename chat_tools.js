@@ -121,12 +121,20 @@ function logMatchingMessages(text) {
         } else {
           var r = e.get("replyUsers");
           if (r) {
-            $.each(r, function(r, n) {
+//            $.each(r, function(r, n) {
+//              if (n.username.toLowerCase().includes(kw[i])) {
+//                doesMatch = true;
+//                break;
+//              }
+//            })
+            
+            for (var j = 0; j < r.length; j++) {
+              var n = r[j];
               if (n.username.toLowerCase().includes(kw[i])) {
                 doesMatch = true;
                 break;
               }
-            })
+            }
           }
         }
       }
@@ -156,7 +164,7 @@ function ignoreSaltybet() {
       } else if (e.get("name") == "Fobwashed") {
         if (text.endsWith("credits.") ||
         (text.includes("[") && text.includes("]")) || 
-        text.startsWith("https://docs.google.com/spreadsheets/d/1K2VLTtuTglRBrEKHmlYTWwM3alYvK3i062R-Ey0XPc0")) {
+        (e.get("replyMessageText") == "!help")) {
           doesMatch = true;
         }
       }
@@ -165,6 +173,27 @@ function ignoreSaltybet() {
         old(e);
       }
     }.bind(main, oldRender);
+}
+
+function seeSnomPostSnom() {
+  var main = Phoenix.FireChat.Core.Rooms.Main;
+  var oldRender = main.renderAddMessage.bind(main);
+  
+  Phoenix.FireChat.postsnom = false;
+  
+  main.renderAddMessage = function(old, e) {
+    if (e.get("userName") != Phoenix.FireChat.Core.User.get("username")) {
+      if (e.get("text").includes(":snom")) {
+        console.log("saw snom");
+        
+        if (Phoenix.FireChat.postsnom) {
+          Phoenix.FireChat.Core.Rooms.Main.Messages.newMessage(":snom", null, null, [], false);
+        }
+      }
+    }
+  
+    old(e);
+  }.bind(main, oldRender);
 }
 
 function ignoreUserMessages(user) {
@@ -195,7 +224,8 @@ function ignoreUserMessages(user) {
       
       for (var i = 0; i < iu.length; i++) {
         if (name && name.toLowerCase().includes(iu[i])) {
-          doesMatch = true;
+          e.set("text", "[𝑚𝑒𝑠𝑠𝑎𝑔𝑒 𝑟𝑒𝑚𝑜𝑣𝑒𝑑]")
+          //doesMatch = true;
           break;
         }
       }
@@ -568,6 +598,10 @@ function chatLoadComplete() {
   textToEmotes();
   
   ignoreSaltybet();
+  
+  seeSnomPostSnom();
+  
+  console.log("chat_tools startup complete")
 }
 
 function waitForChatLoaded(count) {
@@ -611,4 +645,5 @@ function waitForChatLoaded(count) {
   }
 }
 
+console.log("chat_tools starting up")
 waitForChatLoaded();
