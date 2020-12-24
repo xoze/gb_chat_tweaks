@@ -182,17 +182,27 @@ function seeSnomPostSnom() {
   Phoenix.FireChat.postsnom = false;
   
   main.renderAddMessage = function(old, e) {
+    old(e);
+    
     if (e.get("userName") != Phoenix.FireChat.Core.User.get("username")) {
       if (e.get("text").includes(":snom")) {
-        console.log("saw snom");
+        var replyMessage = e.get("id");
+        var replyText = e.get("text");
+        var replyUsers = [{
+          id: e.get("uid"),
+          username: e.get("userName")
+        }];
+        
+        console.log("saw snom: " + replyMessage + ", " + replyText + ", " + replyUsers);
         
         if (Phoenix.FireChat.postsnom) {
-          Phoenix.FireChat.Core.Rooms.Main.Messages.newMessage(":snom", null, null, [], false);
+          if (Phoenix.FireChat.Core.Chat.get("cooldown") <= 1000) {
+            //Phoenix.FireChat.Core.Rooms.Main.Messages.newMessage(":snom", replyMessage, replyText, replyUsers, false);
+            Phoenix.FireChat.Core.Rooms.Main.Messages.newMessage(":snom", null, null, [], false);
+          }
         }
       }
     }
-  
-    old(e);
   }.bind(main, oldRender);
 }
 
@@ -224,7 +234,7 @@ function ignoreUserMessages(user) {
       
       for (var i = 0; i < iu.length; i++) {
         if (name && name.toLowerCase().includes(iu[i])) {
-          e.set("text", "[𝑚𝑒𝑠𝑠𝑎𝑔𝑒 𝑟𝑒𝑚𝑜𝑣𝑒𝑑]")
+          e.set("text", "[𝑏𝑙𝑎ℎ 𝑏𝑙𝑎ℎ 𝑏𝑙𝑎ℎ]")
           //doesMatch = true;
           break;
         }
@@ -300,7 +310,7 @@ function renderEmoticons(e) {
     }
     var s = n.substring(1);
     var u = emotes[s];
-    if (u && a.indexOf(s) === -1) {
+    if (u) {
       e = e.replace(n, '<img src="' + u + '" alt="&#58;' + s + '" title="&#58;' + s + '">');
       i += 1;
       a.push(s)
@@ -362,32 +372,65 @@ function simpleMode() {
   }
 }
 
+function setBanner(name, text) {
+  var a = Phoenix.FireChat.Core.Chat;
+  var n = "banner-" + name;
+  var o = a.get(n);
+  var prev = o ? o.text : "";
+  var i = {
+      text: text,
+      prevText: prev
+  };
+  
+  a.set(n, i);
+  
+  //Phoenix.FireChat.Core.ModTools.renderBanners();
+}
+
 function newEmoteAlert(m) {
-  var text =  "added :" + m.key;
+  var emoteCode = ":" + m.key;
+  var text =  "added " + emoteCode;
   
   //console.log(text);
-  Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = text;
-  Phoenix.FireChat.Core.ModTools.renderBanners();
+  if (Phoenix.FireChat.setupComplete) {
+    // Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = text;
+    // Phoenix.FireChat.Core.ModTools.renderBanners();
+
+    setBanner("top", text);
+  }
+  
+  if (Phoenix.FireChat.AutopostNewEmotes) {
+    var msg = "";
+    for (var i = 0; i < 6; i += 1) {
+      msg = msg + emoteCode + " ";
+    }
+    Phoenix.FireChat.Core.Rooms.Main.Messages.newMessage(msg, null, null, [], false);
+  }
 }
 
 function deletedEmoteAlert(m) {
   var text = "removed :" + m.key
   
   //console.log(text);
-  Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = text;
-  Phoenix.FireChat.Core.ModTools.renderBanners();
+  // Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = text;
+  // Phoenix.FireChat.Core.ModTools.renderBanners();
+
+  setBanner("top", text);
 }
 
 function setupEmoteAlert() {
-  var origBanner = Phoenix.FireChat.Core.Chat.attributes["banner-top"].text;
+  // var origBanner = Phoenix.FireChat.Core.Chat.attributes["banner-top"].text;
   var er = Phoenix.FireChat.Core.Chat.SiteSettingsRef.child("emotes");
+  var isBighChat = window.location.pathname.startsWith("/chat")
+  
+  Phoenix.FireChat.AutopostNewEmotes = false;//isBighChat;
   
   er.on("child_added", newEmoteAlert);
   er.on("child_changed", newEmoteAlert);
   er.on("child_removed", deletedEmoteAlert);
   
-  Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = origBanner;
-  Phoenix.FireChat.Core.ModTools.renderBanners()
+  // Phoenix.FireChat.Core.Chat.attributes["banner-top"].text = origBanner;
+  // Phoenix.FireChat.Core.ModTools.renderBanners()
 }
 
 function padTime(t) {
@@ -595,11 +638,19 @@ function chatLoadComplete() {
   
   emotesToText();
   delete Phoenix.FireChat.Emotes.cchuck;
+  delete Phoenix.FireChat.Emotes.thinkinaboutthos;
+  delete Phoenix.FireChat.Emotes.thisistheron;
+  
+  Phoenix.FireChat.Emotes.cooladult = "https://giantbomb1.cbsistatic.com/uploads/square_mini/29/293532/3127673-goku.jpg";
+  Phoenix.FireChat.Emotes.coolcat = "https://giantbomb1.cbsistatic.com/uploads/square_mini/35/359887/3096889-sunglasses.png";
+  Phoenix.FireChat.Emotes.coolpan = "https://giantbomb1.cbsistatic.com/uploads/square_mini/1/10726/3235858-download20200801234107.png";
   textToEmotes();
   
   ignoreSaltybet();
   
   seeSnomPostSnom();
+
+  Phoenix.FireChat.setupComplete = true;
   
   console.log("chat_tools startup complete")
 }
@@ -646,4 +697,5 @@ function waitForChatLoaded(count) {
 }
 
 console.log("chat_tools starting up")
+
 waitForChatLoaded();

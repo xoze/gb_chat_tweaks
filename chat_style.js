@@ -95,12 +95,6 @@ function replaceCSSWithEditable(styleSheet) {
 } 
 
 function replaceAllCSSWithEditable() {
-  var infinitePopout = window.location.pathname.startsWith("/infinite/popout");
-  var chatPopout = window.location.pathname.startsWith("/chat/popout");
-  if (!infinitePopout && !chatPopout) {
-    return;
-  }
-  
   var sheets = [];
 
   for (var i = 0; i < document.styleSheets.length; i++) {
@@ -150,6 +144,17 @@ function loadScript(url, next) {
   client.send();
 }
 
+function addScriptSrc(url) {
+  let script = document.createElement('script');
+  
+  script.type = 'text/javascript';
+  script.src = url;
+  
+  console.log("injecting script link")
+  
+  let newStyleSheetElement = document.getElementsByTagName("head")[0].appendChild(script);
+}
+
 /**
 * Check for Live Show when user has provided API key and has option turned on.
 */
@@ -171,11 +176,11 @@ function handleOptions(options) {
   let textNode = document.createTextNode(text);
   script.appendChild(textNode);
   
-  let newStyleSheetElement = document.getElementsByTagName("head")[0].appendChild(script);
+  //let newStyleSheetElement = document.getElementsByTagName("head")[0].appendChild(script);
   
   console.log("loading script")
-  loadScript(chrome.runtime.getURL("chat_tools.js"));
-  //loadScript(chrome.runtime.getURL("chat_tools_1.js"));//, function() {loadScript(chrome.runtime.getURL("chat_tools_2.js")); });
+  //loadScript(chrome.runtime.getURL("chat_tools.js"));
+  addScriptSrc(chrome.runtime.getURL("chat_tools.js"))
 }
 
 function handleOptionsAndReply(options, sendResponse) {
@@ -206,8 +211,39 @@ function onError(error) {
   console.log(`Error: ${error}`);
 }
 
-// delete the CSS rules which prevent popout-chat from rendering correctly when narrow
-replaceAllCSSWithEditable();
-//loadScript(chrome.runtime.getURL("chat_tools.js"));
-getOptions();
+function isChat() {
+  var body = document.querySelector("body");
+  
+  for (i = 0; i < body.childElementCount; i++) {
+    if (body.children[i].id == "js-chat-container") {
+      return true;
+    }
+  }
+  
+  return false;
+}
 
+function isPopout() {
+  return document.getElementsByClassName("is-popout").length > 0;
+}
+
+function removeMulticamIfPopout() {
+  if (isPopout()) {
+    var elements = document.getElementsByClassName("spartan-cam");
+    
+    if (elements.length > 0) {
+      elements[0].remove();
+    }
+  }
+}
+
+console.log("is chat: " + isChat());
+if (isChat()) {
+  removeMulticamIfPopout();
+  
+  // delete the CSS rules which prevent popout-chat from rendering correctly when narrow
+  replaceAllCSSWithEditable();
+  
+  //loadScript(chrome.runtime.getURL("chat_tools.js"));
+  getOptions();
+}
