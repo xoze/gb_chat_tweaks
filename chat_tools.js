@@ -644,6 +644,7 @@ function chatLoadComplete() {
   Phoenix.FireChat.Emotes.cooladult = "https://giantbomb1.cbsistatic.com/uploads/square_mini/29/293532/3127673-goku.jpg";
   Phoenix.FireChat.Emotes.coolcat = "https://giantbomb1.cbsistatic.com/uploads/square_mini/35/359887/3096889-sunglasses.png";
   Phoenix.FireChat.Emotes.coolpan = "https://giantbomb1.cbsistatic.com/uploads/square_mini/1/10726/3235858-download20200801234107.png";
+  Phoenix.FireChat.Emotes.peepin2 = "https://giantbomb1.cbsistatic.com/uploads/original/35/359887/3267729-peepin2-smol.png"
   textToEmotes();
   
   ignoreSaltybet();
