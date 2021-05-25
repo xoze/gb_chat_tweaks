@@ -180,7 +180,7 @@ function handleOptions(options) {
   
   console.log("loading script")
   //loadScript(chrome.runtime.getURL("chat_tools.js"));
-  addScriptSrc(chrome.runtime.getURL("chat_tools.js"))
+  addScriptSrc(chrome.runtime.getURL("inject.js"))
 }
 
 function handleOptionsAndReply(options, sendResponse) {
@@ -237,8 +237,90 @@ function removeMulticamIfPopout() {
   }
 }
 
+
+function setupMessagePassing() {
+  console.log("Style: Setting up message passing");
+
+  extension_id = chrome.runtime.id;
+
+
+  window.addEventListener("message", (event) => {
+    if (event.source != window) {
+      return;
+    }
+
+    // console.log(event);
+
+    if (event && event.data && event.data.type && (event.data.type == "gbitweaks_request")) {
+      console.log("Style: got message");
+      // console.log(event.data.data);
+      console.log("Style: got request from page, forwarding to background")
+
+      chrome.runtime.sendMessage(extension_id, event.data, function(response) {
+        console.log("Style: got response from background, forwarding to page")
+        console.log(event.source);
+        console.log(event.origin);
+        console.log(response);
+        event.source.postMessage(response, event.origin);
+      });
+      return true;
+      // switch (event.data.request_type) {
+      //   case "get_option":
+      //     getOption(event.data.option_name, function(option_data){
+      //       message = {
+      //         type: "gbitweaks_response",
+      //         response_type: "get_option",
+      //         option_name: event.data.option_name,
+      //         data: option_data,
+      //         message_id: event.data.message_id
+      //       }
+      //       event.source.postMessage(message, event.origin);
+      //     });
+      //     break;
+      //   case "save_option":
+      //     options = {};
+      //     options[event.data.option_name] = event.data.data;
+
+      //     then = function(){
+      //       if (chrome.runtime.lastError) {
+      //         console.log(runtime.lastError);
+      //       }
+      //       message = {
+      //         type: "gbitweaks_response",
+      //         response_type: "save_option",
+      //         option_name: event.data.option_name,
+      //         message_id: event.data.message_id,
+      //         response: "ok"
+      //       }
+      //       event.source.postMessage(message, event.origin);
+      //     }
+
+      //     if (navigator.userAgent.indexOf("Chrome") != -1) {
+      //       chrome.storage.sync.set(options, then);
+      //     } else {
+      //       setting = browser.storage.sync.set(options);
+      //       setting.then(then, onError)
+      //     }
+      //     break;
+      //   default:
+      //     break;
+      // }
+    }
+  }, false);
+}
+
 console.log("is chat: " + isChat());
 if (isChat()) {
+  setupMessagePassing();
+  // chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  //   console.log(sender.tab ?
+  //     "content_script from a content script:" + sender.tab.url :
+  //     "content_script from the extension");
+  //     if (request.greeting == "hello") {
+  //       sendResponse({farewell: "goodbye"});
+  //     }
+  // });
+  
   removeMulticamIfPopout();
   
   // delete the CSS rules which prevent popout-chat from rendering correctly when narrow

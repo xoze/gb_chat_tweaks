@@ -13,10 +13,10 @@
     "page": "options/options.html"
   },
   
-  "background": {
-    "scripts": ["background.js"],
-    "persistent": false
-  },
+ "background": {
+   "scripts": ["background.js"],
+   "persistent": false
+ },
   
   "content_scripts": [
     {
@@ -25,9 +25,18 @@
       ],
       "js": ["chat_style.js"]
     }
+
   ],
-  "web_accessible_resources" : ["chat_tools.js"],
+
   "externally_connectable": {
-    "matches": ["https://*.giantbomb.com/*"]
-  }
+    "matches": [
+      "*://*.giantbomb.com/*"
+    ],
+    "accepts_tls_channel_id": false
+  },
+
+  "web_accessible_resources" : [
+    "inject.js",
+    "background.js"
+  ]
 }

@@ -206,55 +206,73 @@ function seeSnomPostSnom() {
   }.bind(main, oldRender);
 }
 
-function ignoreUserMessages(user) {
+function initIgnoreUsers() {
   var main = Phoenix.FireChat.Core.Rooms.Main;
   var oldRender = main.renderAddMessage.bind(main);
+  main.ignoreUsers = {};
+
+  main.renderAddMessage = function(old, e) {
+    var doesMatch = false;
+    var name = e.get("name").toLowerCase();
+    var reply = e.get("reply");
+    var replyMessageText = e.get("replyMessageText");
+    var iu = this.ignoreUsers;
+
+    if (name in main.ignoreUsers) {
+      if (main.ignoreUsers[name]) {
+        doesMatch = true;
+      } else {
+        e.set("text", "[𝑏𝑙𝑜𝑐𝑘𝑒𝑑]")
+      }
+    }
+    if (!doesMatch) {
+      old(e);
+    }
+  }.bind(main, oldRender);
+
+  getOption("ignoreUsers", function(resp) {
+    // console.log("got ignoreUsers data");
+    // console.log(resp);
+    if (resp.data) {
+      Phoenix.FireChat.Core.Rooms.Main.ignoreUsers = resp.data;
+    }
+  });
+}
+
+function ignoreUserMessages(user, silence) {
+  var main = Phoenix.FireChat.Core.Rooms.Main;
   
   user = user.toLowerCase();
   
-  if (main.ignoreUsers) {
-    var iu = main.ignoreUsers;
-    
-    for (var i = 0; i < iu.length; i++) {
-      if (iu[i] == user) {
-        return;
-      }
-    }
-    
-    main.ignoreUsers.push(user);
-  } else {
-    main.ignoreUsers = [user];
-  
-    main.renderAddMessage = function(old, e) {
-      var doesMatch = false;
-      var name = e.get("name");
-      var reply = e.get("reply");
-      var replyMessageText = e.get("replyMessageText");
-      var iu = this.ignoreUsers;
-      
-      for (var i = 0; i < iu.length; i++) {
-        if (name && name.toLowerCase().includes(iu[i])) {
-          e.set("text", "[𝑏𝑙𝑎ℎ 𝑏𝑙𝑎ℎ 𝑏𝑙𝑎ℎ]")
-          //doesMatch = true;
-          break;
-        }
-      }
-      if (!doesMatch) {
-        old(e);
-      }
-    }.bind(main, oldRender);
+  if (!main.ignoreUsers) {
+    initIgnoreUsers();
   }
+
+  main.ignoreUsers[user] = silence;
+  saveOption("ignoreUsers", main.ignoreUsers, function(resp){})
 }
 
 function unignoreUserMessages(user) {
+  var main = Phoenix.FireChat.Core.Rooms.Main;
+  user = user.toLowerCase();
+  
   if (main.ignoreUsers) {
-    var iu = main.ignoreUsers;
-    
-    for (var i = 0; i < iu.length; i++) {
-      if (iu[i] == user) {
-        delete iu[i];
-      }
+    if (user in main.ignoreUsers) {
+      delete iu[user];
+      saveOption("ignoreUsers", main.ignoreUsers, function(resp){})
     }
+  }
+}
+
+function listIgnoredUsers() {
+  var main = Phoenix.FireChat.Core.Rooms.Main;
+
+  if (main.ignoreUsers && Object.keys(main.ignoreUsers).length > 0) {
+    for (key in main.ignoreUsers) {
+      console.log(key + " " + (main.ignoreUsers[key] ? "(silenced)" : ""))
+    }
+  } else {
+    console.log("No ignored users")
   }
 }
 
@@ -627,7 +645,90 @@ function setupScrollHold() {
   main.mouseLeaveMessage = function(e){ this.noScroll = false; mouseLeaveMessage(e) }.bind(main);
 }
 
+function sendMessage(message, callback) {
+  message_id = Math.floor(Math.random() * 0x100000000);
+
+
+  if (callback) {
+    GBCT.message_callbacks[message_id] = callback;
+  }
+
+  message.type = "gbitweaks_request";
+  message.message_id = message_id;
+
+  console.log("sending message");
+  console.log(message.data);
+
+  window.postMessage(message, "*");
+}
+
+function saveOption(name, value, callback) {
+  message = {
+    request_type: "save_option",
+    option_name: name,
+    data: value,
+  }
+
+  sendMessage(message, callback);
+}
+
+function getOption(name, callback) {
+  message = {
+    request_type: "get_option",
+    option_name: name,
+  }
+
+  sendMessage(message, callback);
+}
+
+function setupMessageReciever() {
+  GBCT.message_callbacks = new Map();
+
+  console.log("Inject: Setting up message passing");
+
+  window.addEventListener("message", (event) => {
+    // Do we trust the sender of this message?  (might be
+    // different from what we originally opened, for example).
+    if (event.source != window) {
+      return;
+    }
+
+    console.log("Inject: got message");
+    console.log(event);
+
+    if (event && event.data && event.data.type && (event.data.type == "gbitweaks_response")) {
+      if (event.data.message_id && event.data.message_id in GBCT.message_callbacks) {
+        callback = GBCT.message_callbacks[event.data.message_id];
+        delete GBCT.message_callbacks[event.data.message_id];
+        
+        callback(event.data);
+      }
+
+      // switch (event.data.response_type) {
+      //   case "get_option":
+          
+      //     break;
+      //   case "save_option":
+      //     break;
+      //   default:
+      //     break;
+      // }
+    }
+  
+    // event.source is popup
+    // event.data is "hi there yourself!  the secret response is: rheeeeet!"
+  }, false);
+}
+
 function chatLoadComplete() {
+  setupMessageReciever();
+  //console.log("sending message to extension");
+  //window.postMessage({ type: "FROM_PAGE", text: "Hello from the webpage!" }, "*");
+  // chrome.runtime.sendMessage("hknjjnpifdohieihjgdoffbngjenhdjh", {greeting: "hello"}, function(response) {
+  //   console.log(response.farewell);
+  // });
+  
+  
   // replace emote rendering function with one which adds mouseover text of emote code
   Phoenix.FireChat.Utils.renderEmoticons = renderEmoticons;
   
@@ -651,6 +752,10 @@ function chatLoadComplete() {
   
   seeSnomPostSnom();
 
+  initIgnoreUsers();
+
+  //ignoreUserMessages("UserName", true);
+  
   Phoenix.FireChat.setupComplete = true;
   
   console.log("chat_tools startup complete")
@@ -698,5 +803,5 @@ function waitForChatLoaded(count) {
 }
 
 console.log("chat_tools starting up")
-
+GBCT = new Object();
 waitForChatLoaded();
